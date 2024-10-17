@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BME680 Sensor Data</title>
+    <script>
+        // Funkce pro načítání dat ze senzoru
+        function fetchSensorData() {
+            fetch('/bme680_data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('sensorData').innerHTML = "Error: " + data.error;
+                    } else {
+                        document.getElementById('temperature').innerHTML = data.temperature + " °C";
+                        document.getElementById('pressure').innerHTML = data.pressure + " hPa";
+                        document.getElementById('humidity').innerHTML = data.humidity + " %";
+                        document.getElementById('gas').innerHTML = data.gas_resistance + " Ω";
+                    }
+                })
+                .catch(error => console.log('Error:', error));
+        }
+
+        // Aktualizace dat každých 5 sekund
+        setInterval(fetchSensorData, 5000);
+    </script>
+</head>
+<body>
+    <h1>BME680 Sensor Data</h1>
+    <p><strong>Teplota:</strong> <span id="temperature">Načítání...</span></p>
+    <p><strong>Tlak:</strong> <span id="pressure">Načítání...</span></p>
+    <p><strong>Vlhkost:</strong> <span id="humidity">Načítání...</span></p>
+    <p><strong>Odpor plynu:</strong> <span id="gas">Načítání...</span></p>
+</body>
+</html>
