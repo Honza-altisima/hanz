@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home - Senzorová data</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            box-sizing: border-box;
+        }
+        .info {
+            margin-top: 10px;
+            font-size: 24px;
+            color: white;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60vw;
+            margin-top: 20px;
+        }
+        button {
+            width: 100px;
+            height: 64px;
+            font-size: 24px;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            background-color: #4CAF50;
+            margin: 0 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .data-box {
+            margin: 20px;
+            padding: 20px;
+            background-color: #333;
+            border-radius: 8px;
+            width: 60vw;
+        }
+        .data-box h2 {
+            color: #4CAF50;
+            font-size: 28px;
+        }
+        .data-box p {
+            font-size: 24px;
+            color: white;
+        }
+    </style>
+    <script>
+        // Funkce pro načítání dat ze senzoru každých 5 sekund
+        function fetchSensorData() {
+            fetch('/sensor_data')
+            .then(response => response.json())
+            .then(data => {
+                // Aktualizace textu se senzory
+                document.getElementById('temperature').innerText = 'Teplota: ' + data.temperature + ' °C';
+                document.getElementById('humidity').innerText = 'Vlhkost: ' + data.humidity + ' %';
+                document.getElementById('pressure').innerText = 'Tlak: ' + data.pressure + ' hPa';
+                document.getElementById('iaq').innerText = 'Kvalita vzduchu (IAQ): ' + (data.iaq !== null ? data.iaq : "Nedostupné");
+                document.getElementById('gas').innerText = 'Plynový odpor: ' + (data.gas_resistance !== null ? data.gas_resistance + ' Ohms' : "Nedostupné");
+            })
+            .catch(error => {
+                console.error('Chyba při načítání dat ze senzoru:', error);
+            });
+        }
+
+        window.onload = function() {
+            fetchSensorData();  // Načtení dat při načtení stránky
+            setInterval(fetchSensorData, 5000);  // Obnovení dat každých 5 sekund
+        };
+    </script>
+</head>
+<body>
+    <h1 style="color: white;">Senzorová data</h1>
+
+    <div class="data-box">
+        <h2>Teplota</h2>
+        <p id="temperature">Načítání...</p>
+    </div>
+
+    <div class="data-box">
+        <h2>Vlhkost</h2>
+        <p id="humidity">Načítání...</p>
+    </div>
+
+    <div class="data-box">
+        <h2>Tlak</h2>
+        <p id="pressure">Načítání...</p>
+    </div>
+
+    <div class="data-box">
+        <h2>Kvalita vzduchu</h2>
+        <p id="iaq">Načítání...</p>
+    </div>
+
+    <div class="data-box">
+        <h2>Plynový odpor</h2>
+        <p id="gas">Načítání...</p>
+    </div>
+    
+    <!-- Ovládací prvky -->
+    <div class="controls">
+        <button onclick="window.location.href='{{ url_for('index') }}'">Zpět</button>
+    </div>
+    
+</body>
+</html>
