@@ -2,6 +2,7 @@ import os
 import subprocess
 import io
 import time
+import bme680
 from flask import Flask, render_template, request, redirect, url_for, session, Response, jsonify, send_from_directory
 from datetime import datetime
 from picamera import PiCamera
@@ -17,6 +18,49 @@ stop_stream = False
 USERNAME = 'test'
 PASSWORD = 'test'
 
+
+# Inicializace senzoru BME680
+def initialize_bme680():
+    sensor = bme680.BME680()
+    sensor.set_humidity_oversample(bme680.OS_2X)
+    sensor.set_pressure_oversample(bme680.OS_4X)
+    sensor.set_temperature_oversample(bme680.OS_8X)
+    sensor.set_filter(bme680.FILTER_SIZE_3)
+    sensor.set_gas_status(bme680.ENABLE_GAS_MEAS)
+    return sensor
+
+sensor = initialize_bme680()
+
+# Funkce pro čtení hodnot ze senzoru BME680
+def read_bme680_data():
+    if sensor.get_sensor_data():
+        temperature = sensor.data.temperature
+        pressure = sensor.data.pressure
+        humidity = sensor.data.humidity
+        gas_resistance = sensor.data.gas_resistance
+        
+        return {
+            "temperature": round(temperature, 2),
+            "pressure": round(pressure, 2),
+            "humidity": round(humidity, 2),
+            "gas_resistance": round(gas_resistance, 2)
+        }
+    return None
+
+# Endpoint pro získání dat ze senzoru BME680
+@app.route('/bme680_data', methods=['GET'])
+def bme680_data():
+    data = read_bme680_data()
+    if data:
+        return jsonify(data), 200
+    else:
+        return jsonify({"error": "Sensor data not available"}), 500
+
+# Endpoint pro zobrazení jednoduché stránky
+@app.route('/bme680')
+def bme680_page():
+    return render_template('bme680.html')
+	
 # Funkce pro oříznutí obrazu pomocí Pillow
 def crop_image(image_data, left, upper, right, lower):
     # Načtení obrazu z bajtů
