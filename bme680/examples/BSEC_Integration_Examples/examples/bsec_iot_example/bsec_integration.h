@@ -99,7 +99,7 @@ extern "C"
 #define CLASSIFICATION	1
 #define REGRESSION		2
 #define IAQ				3
-#define OUTPUT_MODE		CLASSIFICATION
+#define OUTPUT_MODE		REGRESSION
 
 /* Note : 
           Set the appropriate "SAMPLE_RATE" based on configured "OUTPUT_MODE".
