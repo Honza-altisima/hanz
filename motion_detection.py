@@ -27,8 +27,8 @@ last_motion_time = None  # Čas poslední detekce pohybu
 motion_detected = False  # Příznak, že je detekován pohyb
 motion_end_time = None  # Čas, kdy pohyb ustal
 
-# Uchovávání posledních 5 stabilních snímků
-stable_frame_buffer = deque(maxlen=5)  # Uchová maximálně 5 snímků
+# Uchovávání posledních 5 stabilních snímků před pohybem
+stable_frame_buffer = deque(maxlen=5)  # Uchová maximálně 5 snímků před detekcí pohybu
 
 # Funkce pro odeslání notifikace na telefon
 def send_notification():
@@ -49,12 +49,18 @@ def send_notification():
         except Exception as e:
             print(f"Chyba při odesílání notifikace: {e}")
 
-# Normalizace osvětlení
-def normalize_lighting(image):
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(1.5)  # Zvyšení kontrastu
+# Funkce pro výpočet průměrného jasu snímku
+def calculate_brightness(image):
+    grayscale = image.convert('L')
+    brightness = np.array(grayscale).mean()
+    return brightness
+
+# Normalizace jasu snímků na podobnou úroveň
+def normalize_brightness(image, target_brightness):
+    current_brightness = calculate_brightness(image)
+    brightness_ratio = target_brightness / current_brightness
     enhancer = ImageEnhance.Brightness(image)
-    return enhancer.enhance(1.5)   # Zvyšení jasu
+    return enhancer.enhance(brightness_ratio)
 
 # Funkce pro oříznutí obrazu pomocí Pillow
 def crop_image(image_data, left, upper, right, lower):
@@ -103,8 +109,9 @@ def detect_motion(current_frame):
     if not motion_detected:
         # Když je pohyb ustálený a uplynul čas pro stabilní obraz, uložíme změněný snímek
         if motion_end_time and (current_time - motion_end_time) >= motion_end_delay:
+            # Uložíme původní snímek z bufferu před začátkem pohybu
             if stable_frame_buffer:
-                print("Pohyb ustal, ukládám změněné snímky.")
+                print("Pohyb ustal, ukládám původní a změněné snímky.")
                 save_images_on_motion(stable_frame_buffer[0], stable_frame_buffer[-1])
             motion_end_time = None  # Resetujeme čas pro další detekci
 
@@ -113,8 +120,11 @@ def detect_motion(current_frame):
         if stored_frame is not None:
             img1 = Image.open(io.BytesIO(stored_frame))
             img2 = Image.open(io.BytesIO(cropped_frame))
-            img1 = normalize_lighting(img1)
-            img2 = normalize_lighting(img2)
+
+            # Normalizace jasu mezi snímky
+            target_brightness = calculate_brightness(img1)
+            img1 = normalize_brightness(img1, target_brightness)
+            img2 = normalize_brightness(img2, target_brightness)
 
             diff = ImageChops.difference(img1, img2)
             total_pixels = img1.size[0] * img1.size[1]
@@ -130,10 +140,11 @@ def detect_motion(current_frame):
             if percentage_diff > sensitivity_percentage and diff_pixels > pixel_threshold:
                 last_motion_time = current_time
                 motion_detected = True
-                stable_frame_buffer.append(cropped_frame)
+                stable_frame_buffer.append(cropped_frame)  # Uchování snímku s pohybem
 
-        # Ukládáme aktuální snímek jako stabilní, pokud není pohyb
-        stable_frame_buffer.append(cropped_frame)
+        # Ukládáme aktuální snímek do bufferu pro snímky před pohybem, pokud není detekován pohyb
+        if not motion_detected:
+            stable_frame_buffer.append(cropped_frame)
         stored_frame = cropped_frame
         stored_frame_time = current_time
 

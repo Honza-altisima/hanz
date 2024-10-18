@@ -2,6 +2,7 @@ import os
 import subprocess
 import io
 import time
+import bme680  # Přidáno pro práci se senzorem BME680
 from flask import Flask, render_template, request, redirect, url_for, session, Response, jsonify, send_from_directory
 from datetime import datetime
 from picamera import PiCamera
@@ -16,6 +17,25 @@ stop_stream = False
 # Přihlašovací údaje
 USERNAME = 'test'
 PASSWORD = 'test'
+
+# Funkce pro čtení dat ze senzoru BME680
+def get_sensor_data():
+    sensor = bme680.BME680()  # Inicializace senzoru
+    if sensor.get_sensor_data():  # Kontrola, jestli jsou dostupná data
+        sensor_data = {
+            "temperature": sensor.data.temperature,
+            "humidity": sensor.data.humidity,
+            "pressure": sensor.data.pressure
+        }
+    else:
+        sensor_data = {"temperature": None, "humidity": None, "pressure": None}
+    return sensor_data
+
+# Endpoint pro získání dat ze senzoru
+@app.route('/sensor_data', methods=['GET'])
+def sensor_data():
+    return jsonify(get_sensor_data())
+
 
 # Funkce pro oříznutí obrazu pomocí Pillow
 def crop_image(image_data, left, upper, right, lower):
