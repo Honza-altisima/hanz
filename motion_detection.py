@@ -49,18 +49,12 @@ def send_notification():
         except Exception as e:
             print(f"Chyba při odesílání notifikace: {e}")
 
-# Funkce pro výpočet průměrného jasu snímku
-def calculate_brightness(image):
-    grayscale = image.convert('L')
-    brightness = np.array(grayscale).mean()
-    return brightness
-
-# Normalizace jasu snímků na podobnou úroveň
-def normalize_brightness(image, target_brightness):
-    current_brightness = calculate_brightness(image)
-    brightness_ratio = target_brightness / current_brightness
+# Normalizace osvětlení
+def normalize_lighting(image):
+    enhancer = ImageEnhance.Contrast(image)
+    image = enhancer.enhance(1.5)  # Zvyšení kontrastu
     enhancer = ImageEnhance.Brightness(image)
-    return enhancer.enhance(brightness_ratio)
+    return enhancer.enhance(1.5)   # Zvyšení jasu
 
 # Funkce pro oříznutí obrazu pomocí Pillow
 def crop_image(image_data, left, upper, right, lower):
@@ -119,11 +113,8 @@ def detect_motion(current_frame):
         if stored_frame is not None:
             img1 = Image.open(io.BytesIO(stored_frame))
             img2 = Image.open(io.BytesIO(cropped_frame))
-
-            # Normalizace jasu mezi snímky
-            target_brightness = calculate_brightness(img1)
-            img1 = normalize_brightness(img1, target_brightness)
-            img2 = normalize_brightness(img2, target_brightness)
+            img1 = normalize_lighting(img1)
+            img2 = normalize_lighting(img2)
 
             diff = ImageChops.difference(img1, img2)
             total_pixels = img1.size[0] * img1.size[1]
@@ -163,3 +154,4 @@ def start_detection():
 
 if __name__ == "__main__":
     start_detection()
+
