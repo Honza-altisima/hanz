@@ -115,7 +115,7 @@
                 const newChanges = doc.getElementById('changes-container');
                 document.getElementById('changes-container').innerHTML = newChanges.innerHTML;
             });
-        }, 30000); // 30 sekund
+        }, 20000); // 20 sekund
 
         // Sledování aktivity uživatele a autologout
         let activityTimeout;
@@ -125,7 +125,7 @@
             activityTimeout = setTimeout(function() {
                 fetch('/start_motion', { method: 'GET' });
                 window.location.href = "/logout";  // Odhlášení po 60 sekundách nečinnosti
-            }, 60000);  // 60 sekund
+            }, 20000);  // 20 sekund
         }
 
         // Heartbeat funkce pro server

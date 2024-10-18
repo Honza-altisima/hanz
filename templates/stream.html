@@ -109,18 +109,6 @@
             .catch(error => {
                 console.error('Error fetching system info:', error);
             });
-
-            // Získává data ze senzoru
-            fetch('/sensor_data')
-            .then(response => response.json())
-            .then(sensorData => {
-                document.getElementById('sensor-temperature').innerText = sensorData.temperature.toFixed(2);
-                document.getElementById('sensor-humidity').innerText = sensorData.humidity.toFixed(2);
-                document.getElementById('sensor-pressure').innerText = sensorData.pressure.toFixed(2);
-            })
-            .catch(error => {
-                console.error('Error fetching sensor data:', error);
-            });
         }
 
         // Funkce pro změnu velikosti videa
@@ -131,8 +119,47 @@
             img.style.width = currentWidth + 'vw'; // Aplikování nové šířky
         }
 
+        // Sledování aktivity uživatele a heartbeat signál
+        let activityTimeout;
+
+        function resetActivityTimer() {
+            clearTimeout(activityTimeout);
+            activityTimeout = setTimeout(function() {
+                // Když dojde k odhlášení kvůli neaktivitě, spustí se motion.service
+                fetch('/start_motion', {
+                    method: 'GET'
+                });
+                window.location.href = "/logout";  // Odhlášení po 30 sekundách nečinnosti
+            }, 20000);  // 20 sekund
+        }
+
+        // Heartbeat funkce pro server
+        function sendHeartbeat() {
+            fetch('/heartbeat', {
+                method: 'POST'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error("Failed to send heartbeat");
+                }
+            })
+            .catch(error => {
+                console.error("Error sending heartbeat:", error);
+            });
+        }
+
         window.onload = function() {
+            document.onmousemove = resetActivityTimer;  // Detekuje pohyb myši
+            document.onkeydown = resetActivityTimer;    // Detekuje stisk klávesy
+            resetActivityTimer();  // Nastaví počáteční časovač
+            fetchInfo();  // Získání počátečních informací
+
+            setInterval(sendHeartbeat, 10000);  // Odesílá heartbeat každých 10 sekund
             setInterval(fetchInfo, 500);  // Aktualizace každých 0,5 sekundy
+        };
+
+        window.onbeforeunload = function() {
+            fetch('/start_motion');  // Spuštění detekce pohybu            
         };
     </script>
 </head>
@@ -141,14 +168,7 @@
     
     <!-- Informace v jednom řádku pod streamem -->
     <div id="info" class="info"></div>
-
-    <!-- Nové řádky pro teplotu, vlhkost a tlak -->
-    <div id="sensor-info" class="info">
-        <p>Teplota: <span id="sensor-temperature">Načítání...</span> °C</p>
-        <p>Vlhkost: <span id="sensor-humidity">Načítání...</span> %</p>
-        <p>Tlak: <span id="sensor-pressure">Načítání...</span> hPa</p>
-    </div>
-
+    
     <!-- Kontejner pro tlačítka v jedné řadě -->
     <div class="controls">
         <button onclick="runLED()">LED</button>
