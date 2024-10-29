@@ -35,7 +35,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-right: 20px; /* 20px mezera mezi tlačítky */
+            margin-right: 20px;
         }
         .button:hover {
             background-color: #45a049;
@@ -65,7 +65,7 @@
         th {
             background-color: #4CAF50;
             color: black;
-            border-bottom: 3px solid black; /* Černá čára pod prvním řádkem */
+            border-bottom: 3px solid black;
         }
         tr.excellent {
             background-color: #00ff00;
@@ -131,8 +131,13 @@
 
     <hr class="divider">
 
+    <!-- Zobrazení grafu -->
+    <h2>Graf IAQ, Teplota a Vlhkost</h2>
+    <img id="iaq-graph" src="/static/iaq_temperature_humidity_graphs.png" alt="Graf IAQ, Teploty a Vlhkosti" width="60%">
+
+    <hr class="divider">
+
     <table>
-        <!-- Řádek s názvy sloupců s černou čárou pod sebou -->
         <tr>
             <th>Time</th>
             <th>Temperature (°C)</th>
@@ -140,7 +145,6 @@
             <th>Humidity (%)</th>
             <th>IAQ</th>
         </tr>
-        <!-- Data rows will be inserted dynamically here -->
         <tbody id="new-data"></tbody>
         <tbody id="old-data" class="hidden"></tbody>
     </table>
@@ -154,19 +158,14 @@
             oldData.classList.toggle('hidden', !showOldData);
         }
 
-        function reloadWithCacheClear() {
-            location.reload(true);  // Vynutí načtení bez použití cache
-        }
-
         function loadSensorData() {
             fetch('bme680_data.csv')
                 .then(response => response.text())
                 .then(data => {
-                    const rows = data.split('\n').slice(1).reverse(); // Reverse the rows to show the latest first
+                    const rows = data.split('\n').slice(1).reverse();
                     const newData = document.getElementById('new-data');
                     const oldData = document.getElementById('old-data');
 
-                    // Vymaž staré záznamy
                     newData.innerHTML = '';
                     oldData.innerHTML = '';
 
@@ -176,7 +175,7 @@
                         const time = new Date(columns[0]);
                         const timeDiff = now - time;
                         
-                        if (timeDiff <= 6 * 60 * 60 * 1000) { // Posledních 6 hodin
+                        if (timeDiff <= 6 * 60 * 60 * 1000) {
                             addRow(newData, columns);
                         } else {
                             addRow(oldData, columns);
@@ -218,8 +217,13 @@
             tbody.insertAdjacentHTML('beforeend', rowHtml);
         }
 
-        setInterval(loadSensorData, 60000); // Aktualizace každou minutu
-        setInterval(reloadWithCacheClear, 300000);  // Vynucený refresh každých 5 minut
+        function refreshGraph() {
+            const img = document.getElementById("iaq-graph");
+            img.src = "/static/iaq_temperature_humidity_graphs.png?t=" + new Date().getTime();
+        }
+
+        setInterval(loadSensorData, 60000);
+        setInterval(refreshGraph, 60000); // Obnovení grafu každou minutu
         loadSensorData();
     </script>
 </body>

@@ -216,6 +216,11 @@ def bme():
 def serve_csv():
     return send_from_directory(directory='/opt/camera_stream/', filename='bme680_data.csv')
 
+# Nová routa pro graf.html
+@app.route('/graf')
+def graf():
+    return render_template('graf.html')
+
 # Zajištění, že služba motion.service bude spuštěna při spuštění aplikace
 def ensure_motion_service_running():
     if not check_motion_service_status():
