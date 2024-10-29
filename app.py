@@ -14,8 +14,8 @@ app.secret_key = 'your_secret_key'
 stop_stream = False
 
 # Přihlašovací údaje
-USERNAME = 'test'
-PASSWORD = 'test'
+USERNAME = 'Cam'
+PASSWORD = 'pi'
 
 # Funkce pro oříznutí obrazu pomocí Pillow
 def crop_image(image_data, left, upper, right, lower):
@@ -188,7 +188,7 @@ def login():
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
-            error = "Nesprávné údaje"
+            error = "Nesprávné údaje, zeptej se Honzáka"
 
     return render_template('login.html', error=error)
 
@@ -206,6 +206,15 @@ def index():
     if 'logged_in' in session and session['logged_in']:
         return render_template('stream.html')
     return redirect(url_for('login'))
+
+# bme seznor zobrazeni dat
+@app.route('/bme')
+def bme():
+    return render_template('bme.html')
+
+@app.route('/bme680_data.csv')
+def serve_csv():
+    return send_from_directory(directory='/opt/camera_stream/', filename='bme680_data.csv')
 
 # Zajištění, že služba motion.service bude spuštěna při spuštění aplikace
 def ensure_motion_service_running():

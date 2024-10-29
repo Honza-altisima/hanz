@@ -17,6 +17,7 @@
             width: 60vw; /* Výchozí šířka streamu */
             height: auto;
             object-fit: contain;
+	    border: 3px solid #4CAF50; /* Přidá zelený rámeček */
         }
         .info {
             margin-top: 10px;
@@ -174,7 +175,7 @@
         <button onclick="runLED()">LED</button>
         <button class="resize-button" onclick="adjustVideoSize(-5)">-</button>
         <button class="resize-button" onclick="adjustVideoSize(5)">+</button>
-        <button></button> <!-- Tlačítko F bez funkce -->
+        <button onclick="window.location.href='{{ url_for('bme') }}'">IAQ</button>
         <button onclick="window.location.href='{{ url_for('last') }}'">LAST</button>
     </div>
 </body>

@@ -10,9 +10,9 @@ from collections import deque
 import requests  # Pro odesílání notifikací
 
 # Nastavení citlivosti, času ignorování pohybu a odesílání upozornění
-sensitivity_percentage = 45  # Čím vyšší číslo, tím větší změna je potřeba pro detekci
+sensitivity_percentage = 35  # Čím vyšší číslo, tím větší změna je potřeba pro detekci
 pixel_threshold = 1000  # Počet pixelů, které se musí změnit, aby byla změna považována za významnou
-ignore_motion_duration = 7   # Počet sekund ignorování pohybu po detekci
+ignore_motion_duration = 5   # Počet sekund ignorování pohybu po detekci
 motion_end_delay = 5  # Počet sekund, kdy po ukončení pohybu ukládáme snímek
 send_notifications = False     # Pokud je True, budou odesílány notifikace
 ntfy_topic = "picam"           # Zadej název svého kanálu
@@ -98,26 +98,24 @@ def detect_motion(current_frame):
     left, upper, right, lower = 100, 250, 620, 600  # Upravené souřadnice podle app.py
     cropped_frame = crop_image(current_frame, left, upper, right, lower)
 
-    # Check if the frame is too dark (almost black) and ignore it
-    img_for_brightness_check = Image.open(io.BytesIO(cropped_frame))
-    if calculate_brightness(img_for_brightness_check) < 8:  # Threshold for black frame
-        print("Frame too dark, skipping detection.")
-        return  # Skip this frame if it's too dark
-
     last_frame = cropped_frame
 
     if motion_detected:
+        # Pokud detekujeme pohyb, ale nyní se obraz ustálil, čekáme, než pohyb ustane
         if (current_time - last_motion_time) > ignore_motion_duration:
             motion_detected = False
-            motion_end_time = current_time
+            motion_end_time = current_time  # Zaznamenáme čas, kdy pohyb ustal
 
     if not motion_detected:
+        # Když je pohyb ustálený a uplynul čas pro stabilní obraz, uložíme změněný snímek
         if motion_end_time and (current_time - motion_end_time) >= motion_end_delay:
+            # Uložíme původní snímek z bufferu před začátkem pohybu
             if stable_frame_buffer:
                 print("Pohyb ustal, ukládám původní a změněné snímky.")
                 save_images_on_motion(stable_frame_buffer[0], stable_frame_buffer[-1])
-            motion_end_time = None
+            motion_end_time = None  # Resetujeme čas pro další detekci
 
+    # Kontrola rozdílu mezi aktuálním a uloženým snímkem
     if stored_frame is None or (current_time - stored_frame_time) >= 10:
         if stored_frame is not None:
             img1 = Image.open(io.BytesIO(stored_frame))
@@ -138,11 +136,13 @@ def detect_motion(current_frame):
             print(f"Image difference: {percentage_diff:.2f}%")
             print(f"Počet změněných pixelů: {diff_pixels}")
 
+            # Pokud jsou rozdíly větší než prahy, detekujeme pohyb
             if percentage_diff > sensitivity_percentage and diff_pixels > pixel_threshold:
                 last_motion_time = current_time
                 motion_detected = True
-                stable_frame_buffer.append(cropped_frame)
+                stable_frame_buffer.append(cropped_frame)  # Uchování snímku s pohybem
 
+        # Ukládáme aktuální snímek do bufferu pro snímky před pohybem, pokud není detekován pohyb
         if not motion_detected:
             stable_frame_buffer.append(cropped_frame)
         stored_frame = cropped_frame
