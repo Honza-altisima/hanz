@@ -19,7 +19,7 @@
         .header {
             display: flex;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: space-between;
             width: 60vw;
         }
         .button {
@@ -35,7 +35,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-right: 20px;
         }
         .button:hover {
             background-color: #45a049;
@@ -65,7 +64,7 @@
         th {
             background-color: #4CAF50;
             color: black;
-            border-bottom: 3px solid black;
+            border-bottom: 3px solid black; /* Černá čára pod prvním řádkem */
         }
         tr.excellent {
             background-color: #00ff00;
@@ -103,16 +102,12 @@
             height: 20px;
             margin-right: 10px;
         }
-        .hidden {
-            display: none;
-        }
     </style>
 </head>
 <body>
 
     <div class="header">
         <button class="button" onclick="window.location.href='{{ url_for('index') }}'">Zpět</button>
-        <button class="button" onclick="toggleOldData()">Starší</button>
         <h1 class="title">BME680 Sensor Data</h1>
     </div>
 
@@ -131,13 +126,8 @@
 
     <hr class="divider">
 
-    <!-- Zobrazení grafu -->
-    <h2>Graf IAQ, Teplota a Vlhkost</h2>
-    <img id="iaq-graph" src="/static/iaq_temperature_humidity_graphs.png" alt="Graf IAQ, Teploty a Vlhkosti" width="60%">
-
-    <hr class="divider">
-
     <table>
+        <!-- Řádek s názvy sloupců s černou čárou pod sebou -->
         <tr>
             <th>Time</th>
             <th>Temperature (°C)</th>
@@ -145,41 +135,66 @@
             <th>Humidity (%)</th>
             <th>IAQ</th>
         </tr>
-        <tbody id="new-data"></tbody>
-        <tbody id="old-data" class="hidden"></tbody>
+        <!-- Data rows will be inserted dynamically here -->
     </table>
 
     <script>
-        let showOldData = false;
-
-        function toggleOldData() {
-            const oldData = document.getElementById('old-data');
-            showOldData = !showOldData;
-            oldData.classList.toggle('hidden', !showOldData);
-        }
-
         function loadSensorData() {
             fetch('bme680_data.csv')
                 .then(response => response.text())
                 .then(data => {
-                    const rows = data.split('\n').slice(1).reverse();
-                    const newData = document.getElementById('new-data');
-                    const oldData = document.getElementById('old-data');
+                    const rows = data.split('\n').slice(1).reverse(); // Reverse the rows to show the latest first
+                    const table = document.querySelector('table');
 
-                    newData.innerHTML = '';
-                    oldData.innerHTML = '';
+                    // Vymaž staré záznamy
+                    table.querySelectorAll('tr:not(:first-child)').forEach(row => row.remove());
 
-                    const now = new Date();
-                    rows.forEach(row => {
+                    // Filtrovat záznamy starší než 24 hodin nebo více než 120 záznamů
+                    const filteredRows = rows.filter(row => {
                         const columns = row.split(',');
                         const time = new Date(columns[0]);
+                        const now = new Date();
                         const timeDiff = now - time;
-                        
-                        if (timeDiff <= 6 * 60 * 60 * 1000) {
-                            addRow(newData, columns);
-                        } else {
-                            addRow(oldData, columns);
+                        return timeDiff <= 24 * 60 * 60 * 1000; // 24 hodin v milisekundách
+                    }).slice(0, 120); // Max 120 záznamů
+
+                    if (filteredRows.length === 0) {
+                        console.warn('No valid data in CSV file');
+                        return;
+                    }
+
+                    filteredRows.forEach(row => {
+                        const columns = row.split(',');
+                        if (columns.length < 5) {
+                            console.warn('Invalid row:', row);
+                            return;
                         }
+
+                        const time = columns[0];
+                        const temp = columns[1];
+                        const pressure = columns[2];
+                        const humidity = columns[3];
+                        const iaq = parseFloat(columns[4]);
+
+                        let className = '';
+                        if (iaq <= 50) className = 'excellent';
+                        else if (iaq <= 100) className = 'good';
+                        else if (iaq <= 150) className = 'lightly-polluted';
+                        else if (iaq <= 200) className = 'moderately-polluted';
+                        else if (iaq <= 250) className = 'heavily-polluted';
+                        else if (iaq <= 350) className = 'severely-polluted';
+                        else className = 'extremely-polluted';
+
+                        const rowHtml = `
+                            <tr class="${className}">
+                                <td>${time}</td>
+                                <td>${temp}</td>
+                                <td>${pressure}</td>
+                                <td>${humidity}</td>
+                                <td>${iaq.toFixed(2)}</td>
+                            </tr>
+                        `;
+                        table.insertAdjacentHTML('beforeend', rowHtml); // Insert rows at the end
                     });
                 })
                 .catch(error => {
@@ -187,43 +202,7 @@
                 });
         }
 
-        function addRow(tbody, columns) {
-            if (columns.length < 5) return;
-
-            const time = columns[0];
-            const temp = columns[1];
-            const pressure = columns[2];
-            const humidity = columns[3];
-            const iaq = parseFloat(columns[4]);
-
-            let className = '';
-            if (iaq <= 50) className = 'excellent';
-            else if (iaq <= 100) className = 'good';
-            else if (iaq <= 150) className = 'lightly-polluted';
-            else if (iaq <= 200) className = 'moderately-polluted';
-            else if (iaq <= 250) className = 'heavily-polluted';
-            else if (iaq <= 350) className = 'severely-polluted';
-            else className = 'extremely-polluted';
-
-            const rowHtml = `
-                <tr class="${className}">
-                    <td>${time}</td>
-                    <td>${temp}</td>
-                    <td>${pressure}</td>
-                    <td>${humidity}</td>
-                    <td>${iaq.toFixed(2)}</td>
-                </tr>
-            `;
-            tbody.insertAdjacentHTML('beforeend', rowHtml);
-        }
-
-        function refreshGraph() {
-            const img = document.getElementById("iaq-graph");
-            img.src = "/static/iaq_temperature_humidity_graphs.png?t=" + new Date().getTime();
-        }
-
-        setInterval(loadSensorData, 60000);
-        setInterval(refreshGraph, 60000); // Obnovení grafu každou minutu
+        setInterval(loadSensorData, 60000); // Aktualizace každou minutu
         loadSensorData();
     </script>
 </body>
